@@ -4,13 +4,18 @@ import { v4 as uuidv4 } from 'uuid';
 import { Injectable, InternalServerErrorException, NotFoundException, HttpStatus } from "@nestjs/common";
 import * as admin from 'firebase-admin';
 import { UpdateTodoDto } from "./dto/update.todo.dto";
+import { JwtService } from "@nestjs/jwt";
 
 @Injectable()
 export class TodoService {
+    constructor(private readonly jwtService: JwtService) { }
 
-    async saveTodo({ name, isCompleted }: TodoDto): Promise<any> {
+    async saveTodo({ name, isCompleted }: TodoDto, token: string): Promise<any> {
         const id: string = uuidv4();
-        const todo = new Todo(id, name, isCompleted);
+        const email: string = this.getEmailFromToken(token);
+        console.log('decoded email is ', email);
+
+        const todo = new Todo(id, name, isCompleted, email);
         try {
             await admin.firestore()
                 .collection("todo")
@@ -24,12 +29,12 @@ export class TodoService {
         }
     }
 
-    async getAllTodos(): Promise<Todo[]> {
+    async getAllTodos(token: string): Promise<Todo[]> {
+        let email: string = this.getEmailFromToken(token);
         let todos: Todo[] = [];
-        const querySnapshot = await admin.firestore().collection('todo').get();
+        const querySnapshot = await admin.firestore().collection('todo').where('email', '==', email).get();
         querySnapshot.forEach((doc) => {
-            let todo = this.createTodoFromSnapshot(doc.data());
-            todos.push(todo);
+            todos.push(this.createTodoFromSnapshot(doc.data()));
         });
         return todos;
     }
@@ -64,6 +69,26 @@ export class TodoService {
     }
 
     private createTodoFromSnapshot(snapshot: any): Todo {
-        return new Todo(snapshot['id'], snapshot['name'], snapshot['isCompleted']);
+        return new Todo(snapshot['id'], snapshot['name'], snapshot['isCompleted'], snapshot['email']);
+    }
+
+    private getEmailFromToken(token: string): string {
+        let bearerToken = token.replace(/ /g, "").substring(6, token.length);
+
+        const decodedJwtAccessToken = this.jwtService.decode(bearerToken);
+        console.log("bearer token is", decodedJwtAccessToken);
+
+        if (decodedJwtAccessToken == null) {
+            return null;
+        }
+
+        if (typeof decodedJwtAccessToken === "string") {
+            return null;
+        }
+        if (decodedJwtAccessToken['claims'] != null
+            && decodedJwtAccessToken['claims']['email'] != null) {
+            return decodedJwtAccessToken['claims']['email'];
+        }
+        return null;
     }
 }

@@ -4,7 +4,7 @@ import { TodoDto } from "./dto/todo.dto";
 import { Todo } from "./model/todo";
 import { UpdateTodoDto } from "./dto/update.todo.dto";
 import { FirebaseAuthGuard } from "src/auth/firebase-auth.guard";
-import { GetUser } from "src/auth/get.user.decorator";
+import { GetUserToken } from "src/auth/get.user.decorator";
 import { User } from "src/auth/model/user";
 
 @Controller("todo")
@@ -13,14 +13,13 @@ export class TodoController {
     constructor(private readonly todoService: TodoService) { }
 
     @Post("/")
-    async saveTodo(@Body() todoDto: TodoDto, @GetUser() user: User): Promise<any> {
-        console.log("user is", user);
-        return await this.todoService.saveTodo(todoDto);
+    async saveTodo(@Body() todoDto: TodoDto, @GetUserToken() token: string): Promise<any> {
+        return await this.todoService.saveTodo(todoDto, token);
     }
 
     @Get("/")
-    async getAllTodos(): Promise<Todo[]> {
-        return this.todoService.getAllTodos();
+    async getAllTodos(@GetUserToken() token: string): Promise<Todo[]> {
+        return this.todoService.getAllTodos(token);
     }
 
     @Get("/:id")
