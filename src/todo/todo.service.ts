@@ -5,6 +5,7 @@ import { Injectable, InternalServerErrorException, NotFoundException, HttpStatus
 import * as admin from 'firebase-admin';
 import { UpdateTodoDto } from "./dto/update.todo.dto";
 import { JwtService } from "@nestjs/jwt";
+import { getUserEmailFromToken } from '../util/get_user_email_from_token';
 
 @Injectable()
 export class TodoService {
@@ -12,7 +13,7 @@ export class TodoService {
 
     async saveTodo({ name, isCompleted }: TodoDto, token: string): Promise<any> {
         const id: string = uuidv4();
-        const email: string = this.getEmailFromToken(token);
+        const email: string = getUserEmailFromToken(token, this.jwtService);
         console.log('decoded email is ', email);
 
         const todo = new Todo(id, name, isCompleted, email);
@@ -30,7 +31,7 @@ export class TodoService {
     }
 
     async getAllTodos(token: string): Promise<Todo[]> {
-        let email: string = this.getEmailFromToken(token);
+        let email: string = getUserEmailFromToken(token, this.jwtService);
         let todos: Todo[] = [];
         const querySnapshot = await admin.firestore().collection('todo').where('email', '==', email).get();
         querySnapshot.forEach((doc) => {
@@ -70,25 +71,5 @@ export class TodoService {
 
     private createTodoFromSnapshot(snapshot: any): Todo {
         return new Todo(snapshot['id'], snapshot['name'], snapshot['isCompleted'], snapshot['email']);
-    }
-
-    private getEmailFromToken(token: string): string {
-        let bearerToken = token.replace(/ /g, "").substring(6, token.length);
-
-        const decodedJwtAccessToken = this.jwtService.decode(bearerToken);
-        console.log("bearer token is", decodedJwtAccessToken);
-
-        if (decodedJwtAccessToken == null) {
-            return null;
-        }
-
-        if (typeof decodedJwtAccessToken === "string") {
-            return null;
-        }
-        if (decodedJwtAccessToken['claims'] != null
-            && decodedJwtAccessToken['claims']['email'] != null) {
-            return decodedJwtAccessToken['claims']['email'];
-        }
-        return null;
     }
 }

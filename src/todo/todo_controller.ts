@@ -4,7 +4,7 @@ import { TodoDto } from "./dto/todo.dto";
 import { Todo } from "./model/todo";
 import { UpdateTodoDto } from "./dto/update.todo.dto";
 import { FirebaseAuthGuard } from "src/auth/firebase-auth.guard";
-import { GetUserToken } from "src/auth/get.user.decorator";
+import { GetUserToken } from "src/auth/get_user_token.decorator";
 import { User } from "src/auth/model/user";
 
 @Controller("todo")
